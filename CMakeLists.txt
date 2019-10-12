@@ -3,4 +3,4 @@ project(JeraMarchingCubes)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(JeraMarchingCubes main.cpp)
+add_executable(JeraMarchingCubes main.cpp jera_marching_cubes.h)
