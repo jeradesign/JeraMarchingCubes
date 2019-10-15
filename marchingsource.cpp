@@ -16,22 +16,25 @@
 #include "marchingsource.h"
 #include "stdio.h"
 #include "math.h"
-//This program requires the OpenGL and GLUT libraries
-// You can obtain them for free from http://www.opengl.org
-#include "GLUT/glut.h"
+
+extern "C" {
+    extern void glColor3f (float red, float green, float blue);
+    extern void glNormal3f (float nx, float ny, float nz);
+    extern void glVertex3f (float x, float y, float z);
+}
 
 //These tables are used so that everything can be done in little loops that you can look at all at once
 // rather than in pages and pages of unrolled code.
 
 //a2fVertexOffset lists the positions, relative to vertex0, of each of the 8 vertices of a cube
-static const GLfloat a2fVertexOffset[8][3] =
+static const float a2fVertexOffset[8][3] =
 {
         {0.0, 0.0, 0.0},{1.0, 0.0, 0.0},{1.0, 1.0, 0.0},{0.0, 1.0, 0.0},
         {0.0, 0.0, 1.0},{1.0, 0.0, 1.0},{1.0, 1.0, 1.0},{0.0, 1.0, 1.0}
 };
 
 //a2iEdgeConnection lists the index of the endpoint vertices for each of the 12 edges of the cube
-static const GLint a2iEdgeConnection[12][2] =
+static const int a2iEdgeConnection[12][2] =
 {
         {0,1}, {1,2}, {2,3}, {3,0},
         {4,5}, {5,6}, {6,7}, {7,4},
@@ -39,7 +42,7 @@ static const GLint a2iEdgeConnection[12][2] =
 };
 
 //a2fEdgeDirection lists the direction vector (vertex1-vertex0) for each edge in the cube
-static const GLfloat a2fEdgeDirection[12][3] =
+static const float a2fEdgeDirection[12][3] =
 {
         {1.0, 0.0, 0.0},{0.0, 1.0, 0.0},{-1.0, 0.0, 0.0},{0.0, -1.0, 0.0},
         {1.0, 0.0, 0.0},{0.0, 1.0, 0.0},{-1.0, 0.0, 0.0},{0.0, -1.0, 0.0},
@@ -47,14 +50,14 @@ static const GLfloat a2fEdgeDirection[12][3] =
 };
 
 //a2iTetrahedronEdgeConnection lists the index of the endpoint vertices for each of the 6 edges of the tetrahedron
-static const GLint a2iTetrahedronEdgeConnection[6][2] =
+static const int a2iTetrahedronEdgeConnection[6][2] =
 {
         {0,1},  {1,2},  {2,0},  {0,3},  {1,3},  {2,3}
 };
 
 //a2iTetrahedronEdgeConnection lists the index of verticies from a cube
 // that made up each of the six tetrahedrons within the cube
-static const GLint a2iTetrahedronsInACube[6][4] =
+static const int a2iTetrahedronsInACube[6][4] =
 {
         {0,5,1,6},
         {0,1,2,6},
@@ -66,27 +69,27 @@ static const GLint a2iTetrahedronsInACube[6][4] =
 
 
 
-GLint     iDataSetSize = 16;
-GLfloat   fStepSize = 1.0/iDataSetSize;
-GLfloat   fTargetValue = 48.0;
-GLfloat   fTime = 0.0;
-GLvector  sSourcePoint[3];
+int     iDataSetSize = 16;
+float   fStepSize = 1.0/iDataSetSize;
+float   fTargetValue = 48.0;
+float   fTime = 0.0;
+Vector  sSourcePoint[3];
 
-GLfloat fSample1(GLfloat fX, GLfloat fY, GLfloat fZ);
-GLfloat fSample2(GLfloat fX, GLfloat fY, GLfloat fZ);
-GLfloat fSample3(GLfloat fX, GLfloat fY, GLfloat fZ);
-GLfloat (*fSample)(GLfloat fX, GLfloat fY, GLfloat fZ) = fSample1;
+float fSample1(float fX, float fY, float fZ);
+float fSample2(float fX, float fY, float fZ);
+float fSample3(float fX, float fY, float fZ);
+float (*fSample)(float fX, float fY, float fZ) = fSample1;
 
-GLvoid vMarchingCubes();
-GLvoid vMarchCube1(GLfloat fX, GLfloat fY, GLfloat fZ, GLfloat fScale);
-GLvoid vMarchCube2(GLfloat fX, GLfloat fY, GLfloat fZ, GLfloat fScale);
-GLvoid (*vMarchCube)(GLfloat fX, GLfloat fY, GLfloat fZ, GLfloat fScale) = vMarchCube1;
+void vMarchingCubes();
+void vMarchCube1(float fX, float fY, float fZ, float fScale);
+void vMarchCube2(float fX, float fY, float fZ, float fScale);
+void (*vMarchCube)(float fX, float fY, float fZ, float fScale) = vMarchCube1;
 
 //fGetOffset finds the approximate point of intersection of the surface
 // between two points with the values fValue1 and fValue2
-GLfloat fGetOffset(GLfloat fValue1, GLfloat fValue2, GLfloat fValueDesired)
+float fGetOffset(float fValue1, float fValue2, float fValueDesired)
 {
-        GLdouble fDelta = fValue2 - fValue1;
+        double fDelta = fValue2 - fValue1;
 
         if(fDelta == 0.0)
         {
@@ -97,20 +100,20 @@ GLfloat fGetOffset(GLfloat fValue1, GLfloat fValue2, GLfloat fValueDesired)
 
 
 //vGetColor generates a color from a given position and normal of a point
-GLvoid vGetColor(GLvector &rfColor, GLvector &rfPosition, GLvector &rfNormal)
+void vGetColor(Vector &rfColor, Vector &rfPosition, Vector &rfNormal)
 {
-        GLfloat fX = rfNormal.fX;
-        GLfloat fY = rfNormal.fY;
-        GLfloat fZ = rfNormal.fZ;
+        float fX = rfNormal.fX;
+        float fY = rfNormal.fY;
+        float fZ = rfNormal.fZ;
         rfColor.fX = (fX > 0.0 ? fX : 0.0) + (fY < 0.0 ? -0.5*fY : 0.0) + (fZ < 0.0 ? -0.5*fZ : 0.0);
         rfColor.fY = (fY > 0.0 ? fY : 0.0) + (fZ < 0.0 ? -0.5*fZ : 0.0) + (fX < 0.0 ? -0.5*fX : 0.0);
         rfColor.fZ = (fZ > 0.0 ? fZ : 0.0) + (fX < 0.0 ? -0.5*fX : 0.0) + (fY < 0.0 ? -0.5*fY : 0.0);
 }
 
-GLvoid vNormalizeVector(GLvector &rfVectorResult, GLvector &rfVectorSource)
+void vNormalizeVector(Vector &rfVectorResult, Vector &rfVectorSource)
 {
-        GLfloat fOldLength;
-        GLfloat fScale;
+        float fOldLength;
+        float fScale;
 
         fOldLength = sqrtf( (rfVectorSource.fX * rfVectorSource.fX) +
                             (rfVectorSource.fY * rfVectorSource.fY) +
@@ -134,10 +137,10 @@ GLvoid vNormalizeVector(GLvector &rfVectorResult, GLvector &rfVectorSource)
 
 //Generate a sample data set.  fSample1(), fSample2() and fSample3() define three scalar fields whose
 // values vary by the X,Y and Z coordinates and by the fTime value set by vSetTime()
-GLvoid vSetTime(GLfloat fNewTime)
+void vSetTime(float fNewTime)
 {
-        GLfloat fOffset;
-        GLint iSourceNum;
+        float fOffset;
+        int iSourceNum;
 
         for(iSourceNum = 0; iSourceNum < 3; iSourceNum++)
         {
@@ -154,10 +157,10 @@ GLvoid vSetTime(GLfloat fNewTime)
 }
 
 //fSample1 finds the distance of (fX, fY, fZ) from three moving points
-GLfloat fSample1(GLfloat fX, GLfloat fY, GLfloat fZ)
+float fSample1(float fX, float fY, float fZ)
 {
-        GLdouble fResult = 0.0;
-        GLdouble fDx, fDy, fDz;
+        double fResult = 0.0;
+        double fDx, fDy, fDz;
         fDx = fX - sSourcePoint[0].fX;
         fDy = fY - sSourcePoint[0].fY;
         fDz = fZ - sSourcePoint[0].fZ;
@@ -177,10 +180,10 @@ GLfloat fSample1(GLfloat fX, GLfloat fY, GLfloat fZ)
 }
 
 //fSample2 finds the distance of (fX, fY, fZ) from three moving lines
-GLfloat fSample2(GLfloat fX, GLfloat fY, GLfloat fZ)
+float fSample2(float fX, float fY, float fZ)
 {
-        GLdouble fResult = 0.0;
-        GLdouble fDx, fDy, fDz;
+        double fResult = 0.0;
+        double fDx, fDy, fDz;
         fDx = fX - sSourcePoint[0].fX;
         fDy = fY - sSourcePoint[0].fY;
         fResult += 0.5/(fDx*fDx + fDy*fDy);
@@ -198,11 +201,11 @@ GLfloat fSample2(GLfloat fX, GLfloat fY, GLfloat fZ)
 
 
 //fSample2 defines a height field by plugging the distance from the center into the sin and cos functions
-GLfloat fSample3(GLfloat fX, GLfloat fY, GLfloat fZ)
+float fSample3(float fX, float fY, float fZ)
 {
-        GLfloat fHeight = 20.0*(fTime + sqrt((0.5-fX)*(0.5-fX) + (0.5-fY)*(0.5-fY)));
+        float fHeight = 20.0*(fTime + sqrt((0.5-fX)*(0.5-fX) + (0.5-fY)*(0.5-fY)));
         fHeight = 1.5 + 0.1*(sinf(fHeight) + cosf(fHeight));
-        GLdouble fResult = (fHeight - fZ)*50.0;
+        double fResult = (fHeight - fZ)*50.0;
 
         return fResult;
 }
@@ -210,7 +213,7 @@ GLfloat fSample3(GLfloat fX, GLfloat fY, GLfloat fZ)
 
 //vGetNormal() finds the gradient of the scalar field at a point
 //This gradient can be used as a very accurate vertx normal for lighting calculations
-GLvoid vGetNormal(GLvector &rfNormal, GLfloat fX, GLfloat fY, GLfloat fZ)
+void vGetNormal(Vector &rfNormal, float fX, float fY, float fZ)
 {
         rfNormal.fX = fSample(fX-0.01, fY, fZ) - fSample(fX+0.01, fY, fZ);
         rfNormal.fY = fSample(fX, fY-0.01, fZ) - fSample(fX, fY+0.01, fZ);
@@ -220,17 +223,17 @@ GLvoid vGetNormal(GLvector &rfNormal, GLfloat fX, GLfloat fY, GLfloat fZ)
 
 
 //vMarchCube1 performs the Marching Cubes algorithm on a single cube
-GLvoid vMarchCube1(GLfloat fX, GLfloat fY, GLfloat fZ, GLfloat fScale)
+void vMarchCube1(float fX, float fY, float fZ, float fScale)
 {
-        extern GLint aiCubeEdgeFlags[256];
-        extern GLint a2iTriangleConnectionTable[256][16];
+        extern int aiCubeEdgeFlags[256];
+        extern int a2iTriangleConnectionTable[256][16];
 
-        GLint iCorner, iVertex, iVertexTest, iEdge, iTriangle, iFlagIndex, iEdgeFlags;
-        GLfloat fOffset;
-        GLvector sColor;
-        GLfloat afCubeValue[8];
-        GLvector asEdgeVertex[12];
-        GLvector asEdgeNorm[12];
+        int iCorner, iVertex, iVertexTest, iEdge, iTriangle, iFlagIndex, iEdgeFlags;
+        float fOffset;
+        Vector sColor;
+        float afCubeValue[8];
+        Vector asEdgeVertex[12];
+        Vector asEdgeNorm[12];
 
         //Make a local copy of the values at the cube's corners
         for(iVertex = 0; iVertex < 8; iVertex++)
@@ -295,16 +298,16 @@ GLvoid vMarchCube1(GLfloat fX, GLfloat fY, GLfloat fZ, GLfloat fScale)
 }
 
 //vMarchTetrahedron performs the Marching Tetrahedrons algorithm on a single tetrahedron
-GLvoid vMarchTetrahedron(GLvector *pasTetrahedronPosition, GLfloat *pafTetrahedronValue)
+void vMarchTetrahedron(Vector *pasTetrahedronPosition, float *pafTetrahedronValue)
 {
-        extern GLint aiTetrahedronEdgeFlags[16];
-        extern GLint a2iTetrahedronTriangles[16][7];
+        extern int aiTetrahedronEdgeFlags[16];
+        extern int a2iTetrahedronTriangles[16][7];
 
-        GLint iEdge, iVert0, iVert1, iEdgeFlags, iTriangle, iCorner, iVertex, iFlagIndex = 0;
-        GLfloat fOffset, fInvOffset, fValue = 0.0;
-        GLvector asEdgeVertex[6];
-        GLvector asEdgeNorm[6];
-        GLvector sColor;
+        int iEdge, iVert0, iVert1, iEdgeFlags, iTriangle, iCorner, iVertex, iFlagIndex = 0;
+        float fOffset, fInvOffset, fValue = 0.0;
+        Vector asEdgeVertex[6];
+        Vector asEdgeNorm[6];
+        Vector sColor;
 
         //Find which vertices are inside of the surface and which are outside
         for(iVertex = 0; iVertex < 4; iVertex++)
@@ -361,13 +364,13 @@ GLvoid vMarchTetrahedron(GLvector *pasTetrahedronPosition, GLfloat *pafTetrahedr
 
 
 //vMarchCube2 performs the Marching Tetrahedrons algorithm on a single cube by making six calls to vMarchTetrahedron
-GLvoid vMarchCube2(GLfloat fX, GLfloat fY, GLfloat fZ, GLfloat fScale)
+void vMarchCube2(float fX, float fY, float fZ, float fScale)
 {
-        GLint iVertex, iTetrahedron, iVertexInACube;
-        GLvector asCubePosition[8];
-        GLfloat  afCubeValue[8];
-        GLvector asTetrahedronPosition[4];
-        GLfloat  afTetrahedronValue[4];
+        int iVertex, iTetrahedron, iVertexInACube;
+        Vector asCubePosition[8];
+        float  afCubeValue[8];
+        Vector asTetrahedronPosition[4];
+        float  afTetrahedronValue[4];
 
         //Make a local copy of the cube's corner positions
         for(iVertex = 0; iVertex < 8; iVertex++)
@@ -401,9 +404,9 @@ GLvoid vMarchCube2(GLfloat fX, GLfloat fY, GLfloat fZ, GLfloat fScale)
 
 
 //vMarchingCubes iterates over the entire dataset, calling vMarchCube on each cube
-GLvoid vMarchingCubes()
+void vMarchingCubes()
 {
-        GLint iX, iY, iZ;
+        int iX, iY, iZ;
         for(iX = 0; iX < iDataSetSize; iX++)
         for(iY = 0; iY < iDataSetSize; iY++)
         for(iZ = 0; iZ < iDataSetSize; iZ++)
@@ -420,7 +423,7 @@ GLvoid vMarchingCubes()
 // This table lists the edges intersected by the surface for all 16 possible vertex states
 // There are 6 edges.  For each entry in the table, if edge #n is intersected, then bit #n is set to 1
 
-GLint aiTetrahedronEdgeFlags[16]=
+int aiTetrahedronEdgeFlags[16]=
 {
         0x00, 0x0d, 0x13, 0x1e, 0x26, 0x2b, 0x35, 0x38, 0x38, 0x35, 0x2b, 0x26, 0x1e, 0x13, 0x0d, 0x00,
 };
@@ -432,7 +435,7 @@ GLint aiTetrahedronEdgeFlags[16]=
 //
 // I generated this table by hand
 
-GLint a2iTetrahedronTriangles[16][7] =
+int a2iTetrahedronTriangles[16][7] =
 {
         {-1, -1, -1, -1, -1, -1, -1},
         { 0,  3,  2, -1, -1, -1, -1},
@@ -462,7 +465,7 @@ GLint a2iTetrahedronTriangles[16][7] =
 // This table lists the edges intersected by the surface for all 256 possible vertex states
 // There are 12 edges.  For each entry in the table, if edge #n is intersected, then bit #n is set to 1
 
-GLint aiCubeEdgeFlags[256]=
+int aiCubeEdgeFlags[256]=
 {
         0x000, 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c, 0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
         0x190, 0x099, 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c, 0x99c, 0x895, 0xb9f, 0xa96, 0xd9a, 0xc93, 0xf99, 0xe90,
@@ -490,7 +493,7 @@ GLint aiCubeEdgeFlags[256]=
 //
 //  I found this table in an example program someone wrote long ago.  It was probably generated by hand
 
-GLint a2iTriangleConnectionTable[256][16] =
+int a2iTriangleConnectionTable[256][16] =
 {
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         {0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},

@@ -5,29 +5,27 @@
 #ifndef JERAMARCHINGCUBES_MARCHINGSOURCE_H
 #define JERAMARCHINGCUBES_MARCHINGSOURCE_H
 
-#include <OpenGL/OpenGL.h>
-
-struct GLvector
+struct Vector
 {
-    GLfloat fX;
-    GLfloat fY;
-    GLfloat fZ;
+    float fX;
+    float fY;
+    float fZ;
 };
 
-extern GLint     iDataSetSize;
-extern GLfloat   fStepSize;
-extern GLfloat   fTargetValue;
-extern GLfloat   fTime;
-extern GLvector  sSourcePoint[3];
+extern int     iDataSetSize;
+extern float   fStepSize;
+extern float   fTargetValue;
+extern float   fTime;
+extern Vector  sSourcePoint[3];
 
-extern GLfloat fSample1(GLfloat fX, GLfloat fY, GLfloat fZ);
-extern GLfloat fSample2(GLfloat fX, GLfloat fY, GLfloat fZ);
-extern GLfloat fSample3(GLfloat fX, GLfloat fY, GLfloat fZ);
-extern GLfloat (*fSample)(GLfloat fX, GLfloat fY, GLfloat fZ);
+extern float fSample1(float fX, float fY, float fZ);
+extern float fSample2(float fX, float fY, float fZ);
+extern float fSample3(float fX, float fY, float fZ);
+extern float (*fSample)(float fX, float fY, float fZ);
 
-extern GLvoid vMarchingCubes();
-extern GLvoid vMarchCube1(GLfloat fX, GLfloat fY, GLfloat fZ, GLfloat fScale);
-extern GLvoid vMarchCube2(GLfloat fX, GLfloat fY, GLfloat fZ, GLfloat fScale);
-extern GLvoid (*vMarchCube)(GLfloat fX, GLfloat fY, GLfloat fZ, GLfloat fScale);
+extern void vMarchingCubes();
+extern void vMarchCube1(float fX, float fY, float fZ, float fScale);
+extern void vMarchCube2(float fX, float fY, float fZ, float fScale);
+extern void (*vMarchCube)(float fX, float fY, float fZ, float fScale);
 
 #endif //JERAMARCHINGCUBES_MARCHINGSOURCE_H
