@@ -281,7 +281,14 @@ void vDrawScene()
     glPushMatrix();
     glTranslatef(-0.5, -0.5, -0.5);
     glBegin(GL_TRIANGLES);
-    vMarchingCubes();
+    glColor3f(afDiffuseBlue[0], afDiffuseBlue[1], afDiffuseBlue[2]);
+    std::vector<Vector> vertices;
+    std::vector<Vector> normals;
+    vMarchingCubes(vertices, normals);
+    for (unsigned long i = 0; i < vertices.size(); ++i) {
+        glNormal3f(normals[i].fX, normals[i].fY, normals[i].fZ);
+        glVertex3f(vertices[i].fX, vertices[i].fY, vertices[i].fZ);
+    }
     glEnd();
     glPopMatrix();
 

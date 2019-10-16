@@ -18,7 +18,6 @@
 #include "math.h"
 
 extern "C" {
-extern void glColor3f (float red, float green, float blue);
 extern void glNormal3f (float nx, float ny, float nz);
 extern void glVertex3f (float x, float y, float z);
 }
@@ -75,15 +74,10 @@ float   fTargetValue = 48.0;
 float   fTime = 0.0;
 Vector  sSourcePoint[3];
 
-float fSample1(float fX, float fY, float fZ);
-float fSample2(float fX, float fY, float fZ);
-float fSample3(float fX, float fY, float fZ);
 float (*fSample)(float fX, float fY, float fZ) = fSample1;
 
-void vMarchingCubes();
-void vMarchCube1(float fX, float fY, float fZ, float fScale);
-void vMarchCube2(float fX, float fY, float fZ, float fScale);
-void (*vMarchCube)(float fX, float fY, float fZ, float fScale) = vMarchCube1;
+void (*vMarchCube)(float fX, float fY, float fZ, float fScale,
+                   std::vector<Vector>& vertices, std::vector<Vector>& normals) = vMarchCube1;
 
 //fGetOffset finds the approximate point of intersection of the surface
 // between two points with the values fValue1 and fValue2
@@ -223,7 +217,8 @@ void vGetNormal(Vector &rfNormal, float fX, float fY, float fZ)
 
 
 //vMarchCube1 performs the Marching Cubes algorithm on a single cube
-void vMarchCube1(float fX, float fY, float fZ, float fScale)
+extern void vMarchCube1(float fX, float fY, float fZ, float fScale,
+                        std::vector<Vector>& vertices, std::vector<Vector>& normals)
 {
     extern int aiCubeEdgeFlags[256];
     extern int a2iTriangleConnectionTable[256][16];
@@ -292,8 +287,6 @@ void vMarchCube1(float fX, float fY, float fZ, float fScale)
         {
             iVertex = a2iTriangleConnectionTable[iFlagIndex][3*iTriangle+iCorner];
 
-            vGetColor(sColor, asEdgeVertex[iVertex], asEdgeNorm[iVertex]);
-            glColor3f(sColor.fX, sColor.fY, sColor.fZ);
             glNormal3f(asEdgeNorm[iVertex].fX,   asEdgeNorm[iVertex].fY,   asEdgeNorm[iVertex].fZ);
             glVertex3f(asEdgeVertex[iVertex].fX, asEdgeVertex[iVertex].fY, asEdgeVertex[iVertex].fZ);
         }
@@ -301,7 +294,8 @@ void vMarchCube1(float fX, float fY, float fZ, float fScale)
 }
 
 //vMarchTetrahedron performs the Marching Tetrahedrons algorithm on a single tetrahedron
-void vMarchTetrahedron(Vector *pasTetrahedronPosition, float *pafTetrahedronValue)
+void vMarchTetrahedron(Vector *pasTetrahedronPosition, float *pafTetrahedronValue,
+                       std::vector<Vector>& vertices, std::vector<Vector>& normals)
 {
     extern int aiTetrahedronEdgeFlags[16];
     extern int a2iTetrahedronTriangles[16][7];
@@ -339,9 +333,12 @@ void vMarchTetrahedron(Vector *pasTetrahedronPosition, float *pafTetrahedronValu
             fOffset = fGetOffset(pafTetrahedronValue[iVert0], pafTetrahedronValue[iVert1], fTargetValue);
             fInvOffset = 1.0 - fOffset;
 
-            asEdgeVertex[iEdge].fX = fInvOffset*pasTetrahedronPosition[iVert0].fX  +  fOffset*pasTetrahedronPosition[iVert1].fX;
-            asEdgeVertex[iEdge].fY = fInvOffset*pasTetrahedronPosition[iVert0].fY  +  fOffset*pasTetrahedronPosition[iVert1].fY;
-            asEdgeVertex[iEdge].fZ = fInvOffset*pasTetrahedronPosition[iVert0].fZ  +  fOffset*pasTetrahedronPosition[iVert1].fZ;
+            asEdgeVertex[iEdge].fX = fInvOffset*pasTetrahedronPosition[iVert0].fX  +
+                fOffset*pasTetrahedronPosition[iVert1].fX;
+            asEdgeVertex[iEdge].fY = fInvOffset*pasTetrahedronPosition[iVert0].fY  +
+                fOffset*pasTetrahedronPosition[iVert1].fY;
+            asEdgeVertex[iEdge].fZ = fInvOffset*pasTetrahedronPosition[iVert0].fZ  +
+                fOffset*pasTetrahedronPosition[iVert1].fZ;
 
             vGetNormal(asEdgeNorm[iEdge], asEdgeVertex[iEdge].fX, asEdgeVertex[iEdge].fY, asEdgeVertex[iEdge].fZ);
         }
@@ -356,8 +353,6 @@ void vMarchTetrahedron(Vector *pasTetrahedronPosition, float *pafTetrahedronValu
         {
             iVertex = a2iTetrahedronTriangles[iFlagIndex][3*iTriangle+iCorner];
 
-            vGetColor(sColor, asEdgeVertex[iVertex], asEdgeNorm[iVertex]);
-            glColor3f(sColor.fX, sColor.fY, sColor.fZ);
             glNormal3f(asEdgeNorm[iVertex].fX,   asEdgeNorm[iVertex].fY,   asEdgeNorm[iVertex].fZ);
             glVertex3f(asEdgeVertex[iVertex].fX, asEdgeVertex[iVertex].fY, asEdgeVertex[iVertex].fZ);
         }
@@ -367,7 +362,8 @@ void vMarchTetrahedron(Vector *pasTetrahedronPosition, float *pafTetrahedronValu
 
 
 //vMarchCube2 performs the Marching Tetrahedrons algorithm on a single cube by making six calls to vMarchTetrahedron
-void vMarchCube2(float fX, float fY, float fZ, float fScale)
+extern void vMarchCube2(float fX, float fY, float fZ, float fScale,
+                        std::vector<Vector>& vertices, std::vector<Vector>& normals)
 {
     int iVertex, iTetrahedron, iVertexInACube;
     Vector asCubePosition[8];
@@ -401,20 +397,20 @@ void vMarchCube2(float fX, float fY, float fZ, float fScale)
             asTetrahedronPosition[iVertex].fZ = asCubePosition[iVertexInACube].fZ;
             afTetrahedronValue[iVertex] = afCubeValue[iVertexInACube];
         }
-        vMarchTetrahedron(asTetrahedronPosition, afTetrahedronValue);
+        vMarchTetrahedron(asTetrahedronPosition, afTetrahedronValue, vertices, normals);
     }
 }
 
 
 //vMarchingCubes iterates over the entire dataset, calling vMarchCube on each cube
-void vMarchingCubes()
+void vMarchingCubes(std::vector<Vector>& vertices, std::vector<Vector>& normals)
 {
     int iX, iY, iZ;
     for(iX = 0; iX < iDataSetSize; iX++)
         for(iY = 0; iY < iDataSetSize; iY++)
             for(iZ = 0; iZ < iDataSetSize; iZ++)
             {
-                vMarchCube(iX*fStepSize, iY*fStepSize, iZ*fStepSize, fStepSize);
+                vMarchCube(iX*fStepSize, iY*fStepSize, iZ*fStepSize, fStepSize, vertices, normals);
             }
 }
 
