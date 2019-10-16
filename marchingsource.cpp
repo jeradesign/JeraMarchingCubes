@@ -63,13 +63,15 @@ static const int a2iTetrahedronsInACube[6][4] =
 
 
 
-int     iDataSetSize = 16;
+int     iDataSetSize = 100;
 float   fStepSize = 1.0/iDataSetSize;
-float   fTargetValue = 48.0;
+float   fTargetValue = 879 * 0.55f;
 float   fTime = 0.0;
 Vector  sSourcePoint[3];
 
-float (*fSample)(float fX, float fY, float fZ) = fSample1;
+uint16_t* voxelData;
+
+float (*fSample)(float fX, float fY, float fZ) = fSample4;
 
 void (*vMarchCube)(float fX, float fY, float fZ, float fScale,
                    std::vector<Vector>& vertices, std::vector<Vector>& normals) = vMarchCube1;
@@ -188,6 +190,17 @@ float fSample3(float fX, float fY, float fZ)
     return fResult;
 }
 
+//fSample4 defines a height field by reading from voxelData
+float fSample4(float fX, float fY, float fZ)
+{
+    int x = int(fX);
+    int y = int(fY);
+    int z = int(fZ);
+
+    float sample = voxelData[z * 146 * 128 + y * 128 + x];
+
+    return sample;
+}
 
 //vGetNormal() finds the gradient of the scalar field at a point
 //This gradient can be used as a very accurate vertx normal for lighting calculations
@@ -216,9 +229,9 @@ extern void vMarchCube1(float fX, float fY, float fZ, float fScale,
     //Make a local copy of the values at the cube's corners
     for(iVertex = 0; iVertex < 8; iVertex++)
     {
-        afCubeValue[iVertex] = fSample(fX + a2fVertexOffset[iVertex][0]*fScale,
-                                       fY + a2fVertexOffset[iVertex][1]*fScale,
-                                       fZ + a2fVertexOffset[iVertex][2]*fScale);
+        afCubeValue[iVertex] = fSample(fX + a2fVertexOffset[iVertex][0],
+                                       fY + a2fVertexOffset[iVertex][1],
+                                       fZ + a2fVertexOffset[iVertex][2]);
     }
 
     //Find which vertices are inside of the surface and which are outside
@@ -248,11 +261,11 @@ extern void vMarchCube1(float fX, float fY, float fZ, float fScale,
             fOffset = fGetOffset(afCubeValue[ a2iEdgeConnection[iEdge][0] ],
                                  afCubeValue[ a2iEdgeConnection[iEdge][1] ], fTargetValue);
 
-            asEdgeVertex[iEdge].fX = fX + (a2fVertexOffset[ a2iEdgeConnection[iEdge][0] ][0]  +
+            asEdgeVertex[iEdge].fX = fX * fScale + (a2fVertexOffset[ a2iEdgeConnection[iEdge][0] ][0]  +
                 fOffset * a2fEdgeDirection[iEdge][0]) * fScale;
-            asEdgeVertex[iEdge].fY = fY + (a2fVertexOffset[ a2iEdgeConnection[iEdge][0] ][1]  +
+            asEdgeVertex[iEdge].fY = fY * fScale + (a2fVertexOffset[ a2iEdgeConnection[iEdge][0] ][1]  +
                 fOffset * a2fEdgeDirection[iEdge][1]) * fScale;
-            asEdgeVertex[iEdge].fZ = fZ + (a2fVertexOffset[ a2iEdgeConnection[iEdge][0] ][2]  +
+            asEdgeVertex[iEdge].fZ = fZ * fScale + (a2fVertexOffset[ a2iEdgeConnection[iEdge][0] ][2]  +
                 fOffset * a2fEdgeDirection[iEdge][2]) * fScale;
 
             vGetNormal(asEdgeNorm[iEdge], asEdgeVertex[iEdge].fX, asEdgeVertex[iEdge].fY, asEdgeVertex[iEdge].fZ);
@@ -392,7 +405,7 @@ void vMarchingCubes(std::vector<Vector>& vertices, std::vector<Vector>& normals)
         for(iY = 0; iY < iDataSetSize; iY++)
             for(iZ = 0; iZ < iDataSetSize; iZ++)
             {
-                vMarchCube(iX*fStepSize, iY*fStepSize, iZ*fStepSize, fStepSize, vertices, normals);
+                vMarchCube(iX, iY, iZ, fStepSize, vertices, normals);
             }
 }
 

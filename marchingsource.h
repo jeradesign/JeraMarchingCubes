@@ -20,9 +20,12 @@ extern float   fTargetValue;
 extern float   fTime;
 extern Vector  sSourcePoint[3];
 
+extern uint16_t* voxelData;
+
 extern float fSample1(float fX, float fY, float fZ);
 extern float fSample2(float fX, float fY, float fZ);
 extern float fSample3(float fX, float fY, float fZ);
+extern float fSample4(float fX, float fY, float fZ);
 extern float (*fSample)(float fX, float fY, float fZ);
 
 extern void vMarchingCubes(std::vector<Vector>& vertices, std::vector<Vector>& normals);

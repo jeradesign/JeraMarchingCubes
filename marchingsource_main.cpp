@@ -13,6 +13,7 @@
 // This code is public domain.
 //
 
+#include <fstream>
 #include "stdio.h"
 #include "math.h"
 //This program requires the OpenGL and GLUT libraries
@@ -51,6 +52,15 @@ GLvoid vSetTime(GLfloat fTime);
 
 int main(int argc, char **argv)
 {
+    std::ifstream pixelDataFile("pixel_data.raw");
+    pixelDataFile.seekg(0, pixelDataFile.end);
+    size_t length = pixelDataFile.tellg();
+    pixelDataFile.seekg(0, pixelDataFile.beg);
+
+    std::vector<uint8_t> pixelData(length);
+    pixelDataFile.read(reinterpret_cast<char*>(pixelData.data()), length);
+    voxelData = reinterpret_cast<uint16_t*>(pixelData.data());
+
     GLfloat afPropertiesAmbient [] = {0.50, 0.50, 0.50, 1.00};
     GLfloat afPropertiesDiffuse [] = {0.75, 0.75, 0.75, 1.00};
     GLfloat afPropertiesSpecular[] = {1.00, 1.00, 1.00, 1.00};
