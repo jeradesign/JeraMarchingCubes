@@ -287,8 +287,8 @@ extern void vMarchCube1(float fX, float fY, float fZ, float fScale,
         {
             iVertex = a2iTriangleConnectionTable[iFlagIndex][3*iTriangle+iCorner];
 
-            glNormal3f(asEdgeNorm[iVertex].fX,   asEdgeNorm[iVertex].fY,   asEdgeNorm[iVertex].fZ);
-            glVertex3f(asEdgeVertex[iVertex].fX, asEdgeVertex[iVertex].fY, asEdgeVertex[iVertex].fZ);
+            normals.push_back(asEdgeNorm[iVertex]);
+            vertices.push_back(asEdgeVertex[iVertex]);
         }
     }
 }
@@ -353,8 +353,8 @@ void vMarchTetrahedron(Vector *pasTetrahedronPosition, float *pafTetrahedronValu
         {
             iVertex = a2iTetrahedronTriangles[iFlagIndex][3*iTriangle+iCorner];
 
-            glNormal3f(asEdgeNorm[iVertex].fX,   asEdgeNorm[iVertex].fY,   asEdgeNorm[iVertex].fZ);
-            glVertex3f(asEdgeVertex[iVertex].fX, asEdgeVertex[iVertex].fY, asEdgeVertex[iVertex].fZ);
+            normals.push_back(asEdgeNorm[iVertex]);
+            vertices.push_back(asEdgeVertex[iVertex]);
         }
     }
 }
