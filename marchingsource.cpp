@@ -17,11 +17,6 @@
 #include "stdio.h"
 #include "math.h"
 
-extern "C" {
-extern void glNormal3f (float nx, float ny, float nz);
-extern void glVertex3f (float x, float y, float z);
-}
-
 //These tables are used so that everything can be done in little loops that you can look at all at once
 // rather than in pages and pages of unrolled code.
 
