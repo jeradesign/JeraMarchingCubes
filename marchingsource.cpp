@@ -225,7 +225,6 @@ extern void vMarchCube1(float fX, float fY, float fZ, float fScale,
 
     int iCorner, iVertex, iVertexTest, iEdge, iTriangle, iFlagIndex, iEdgeFlags;
     float fOffset;
-    Vector sColor;
     float afCubeValue[8];
     Vector asEdgeVertex[12];
     Vector asEdgeNorm[12];
@@ -304,7 +303,6 @@ void vMarchTetrahedron(Vector *pasTetrahedronPosition, float *pafTetrahedronValu
     float fOffset, fInvOffset, fValue = 0.0;
     Vector asEdgeVertex[6];
     Vector asEdgeNorm[6];
-    Vector sColor;
 
     //Find which vertices are inside of the surface and which are outside
     for(iVertex = 0; iVertex < 4; iVertex++)
