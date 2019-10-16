@@ -93,17 +93,6 @@ float fGetOffset(float fValue1, float fValue2, float fValueDesired)
 }
 
 
-//vGetColor generates a color from a given position and normal of a point
-void vGetColor(Vector &rfColor, Vector &rfPosition, Vector &rfNormal)
-{
-    float fX = rfNormal.fX;
-    float fY = rfNormal.fY;
-    float fZ = rfNormal.fZ;
-    rfColor.fX = (fX > 0.0 ? fX : 0.0) + (fY < 0.0 ? -0.5*fY : 0.0) + (fZ < 0.0 ? -0.5*fZ : 0.0);
-    rfColor.fY = (fY > 0.0 ? fY : 0.0) + (fZ < 0.0 ? -0.5*fZ : 0.0) + (fX < 0.0 ? -0.5*fX : 0.0);
-    rfColor.fZ = (fZ > 0.0 ? fZ : 0.0) + (fX < 0.0 ? -0.5*fX : 0.0) + (fY < 0.0 ? -0.5*fY : 0.0);
-}
-
 void vNormalizeVector(Vector &rfVectorResult, Vector &rfVectorSource)
 {
     float fOldLength;
