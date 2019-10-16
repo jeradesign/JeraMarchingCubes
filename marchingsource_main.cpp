@@ -114,8 +114,6 @@ GLvoid vPrintHelp()
 
     printf("+/-  increase/decrease sample density\n");
     printf("PageUp/PageDown  increase/decrease surface value\n");
-    printf("s  change sample function\n");
-    printf("c  toggle marching cubes / marching tetrahedrons\n");
     printf("w  wireframe on/off\n");
     printf("l  toggle lighting / color-by-normal\n");
     printf("Home  spin scene on/off\n");
@@ -175,32 +173,6 @@ void vKeyboard(unsigned char cKey, int iX, int iY)
             {
                 --iDataSetSize;
                 fStepSize = 1.0/iDataSetSize;
-            }
-        } break;
-        case 'c' :
-        {
-            if(vMarchCube == vMarchCube1)
-            {
-                vMarchCube = vMarchCube2;//Use Marching Tetrahedrons
-            }
-            else
-            {
-                vMarchCube = vMarchCube1;//Use Marching Cubes
-            }
-        } break;
-        case 's' :
-        {
-            if(fSample == fSample1)
-            {
-                fSample = fSample2;
-            }
-            else if(fSample == fSample2)
-            {
-                fSample = fSample3;
-            }
-            else
-            {
-                fSample = fSample1;
             }
         } break;
         case 'l' :

@@ -204,11 +204,22 @@ float fSample4(float fX, float fY, float fZ)
 
 //vGetNormal() finds the gradient of the scalar field at a point
 //This gradient can be used as a very accurate vertx normal for lighting calculations
-void vGetNormal(Vector &rfNormal, float fX, float fY, float fZ)
+void vGetNormal(Vector &rfNormal, const Vector& rightVertex, const Vector& thisVertex, const Vector& leftVertex)
 {
-    rfNormal.fX = fSample(fX-0.01, fY, fZ) - fSample(fX+0.01, fY, fZ);
-    rfNormal.fY = fSample(fX, fY-0.01, fZ) - fSample(fX, fY+0.01, fZ);
-    rfNormal.fZ = fSample(fX, fY, fZ-0.01) - fSample(fX, fY, fZ+0.01);
+    Vector v1 = leftVertex;
+    v1.fX -= thisVertex.fX;
+    v1.fY -= thisVertex.fY;
+    v1.fZ -= thisVertex.fZ;
+
+    Vector v2 = rightVertex;
+    v2.fX -= thisVertex.fX;
+    v2.fY -= thisVertex.fY;
+    v2.fZ -= thisVertex.fZ;
+
+    rfNormal.fX = v1.fY * v2.fZ - v1.fZ * v2.fY;
+    rfNormal.fY = v1.fZ * v2.fX - v1.fX * v2.fZ;
+    rfNormal.fZ = v1.fX * v2.fY - v1.fY * v2.fX;
+
     vNormalizeVector(rfNormal, rfNormal);
 }
 
@@ -267,8 +278,6 @@ extern void vMarchCube1(float fX, float fY, float fZ, float fScale,
                 fOffset * a2fEdgeDirection[iEdge][1]) * fScale;
             asEdgeVertex[iEdge].fZ = fZ * fScale + (a2fVertexOffset[ a2iEdgeConnection[iEdge][0] ][2]  +
                 fOffset * a2fEdgeDirection[iEdge][2]) * fScale;
-
-            vGetNormal(asEdgeNorm[iEdge], asEdgeVertex[iEdge].fX, asEdgeVertex[iEdge].fY, asEdgeVertex[iEdge].fZ);
         }
     }
 
@@ -282,117 +291,14 @@ extern void vMarchCube1(float fX, float fY, float fZ, float fScale,
         for(iCorner = 0; iCorner < 3; iCorner++)
         {
             iVertex = a2iTriangleConnectionTable[iFlagIndex][3*iTriangle+iCorner];
+            int iLeftVertex = a2iTriangleConnectionTable[iFlagIndex][3*iTriangle+(iCorner - 1)%3];
+            int iRightVertex = a2iTriangleConnectionTable[iFlagIndex][3*iTriangle+(iCorner + 1)%3];
 
-            normals.push_back(asEdgeNorm[iVertex]);
+            Vector normal;
+            vGetNormal(normal, asEdgeVertex[iLeftVertex], asEdgeVertex[iVertex], asEdgeVertex[iRightVertex]);
+            normals.push_back(normal);
             vertices.push_back(asEdgeVertex[iVertex]);
         }
-    }
-}
-
-//vMarchTetrahedron performs the Marching Tetrahedrons algorithm on a single tetrahedron
-void vMarchTetrahedron(Vector *pasTetrahedronPosition, float *pafTetrahedronValue,
-                       std::vector<Vector>& vertices, std::vector<Vector>& normals)
-{
-    extern int aiTetrahedronEdgeFlags[16];
-    extern int a2iTetrahedronTriangles[16][7];
-
-    int iEdge, iVert0, iVert1, iEdgeFlags, iTriangle, iCorner, iVertex, iFlagIndex = 0;
-    float fOffset, fInvOffset, fValue = 0.0;
-    Vector asEdgeVertex[6];
-    Vector asEdgeNorm[6];
-
-    //Find which vertices are inside of the surface and which are outside
-    for(iVertex = 0; iVertex < 4; iVertex++)
-    {
-        if(pafTetrahedronValue[iVertex] <= fTargetValue)
-            iFlagIndex |= 1<<iVertex;
-    }
-
-    //Find which edges are intersected by the surface
-    iEdgeFlags = aiTetrahedronEdgeFlags[iFlagIndex];
-
-    //If the tetrahedron is entirely inside or outside of the surface, then there will be no intersections
-    if(iEdgeFlags == 0)
-    {
-        return;
-    }
-    //Find the point of intersection of the surface with each edge
-    // Then find the normal to the surface at those points
-    for(iEdge = 0; iEdge < 6; iEdge++)
-    {
-        //if there is an intersection on this edge
-        if(iEdgeFlags & (1<<iEdge))
-        {
-            iVert0 = a2iTetrahedronEdgeConnection[iEdge][0];
-            iVert1 = a2iTetrahedronEdgeConnection[iEdge][1];
-            fOffset = fGetOffset(pafTetrahedronValue[iVert0], pafTetrahedronValue[iVert1], fTargetValue);
-            fInvOffset = 1.0 - fOffset;
-
-            asEdgeVertex[iEdge].fX = fInvOffset*pasTetrahedronPosition[iVert0].fX  +
-                fOffset*pasTetrahedronPosition[iVert1].fX;
-            asEdgeVertex[iEdge].fY = fInvOffset*pasTetrahedronPosition[iVert0].fY  +
-                fOffset*pasTetrahedronPosition[iVert1].fY;
-            asEdgeVertex[iEdge].fZ = fInvOffset*pasTetrahedronPosition[iVert0].fZ  +
-                fOffset*pasTetrahedronPosition[iVert1].fZ;
-
-            vGetNormal(asEdgeNorm[iEdge], asEdgeVertex[iEdge].fX, asEdgeVertex[iEdge].fY, asEdgeVertex[iEdge].fZ);
-        }
-    }
-    //Draw the triangles that were found.  There can be up to 2 per tetrahedron
-    for(iTriangle = 0; iTriangle < 2; iTriangle++)
-    {
-        if(a2iTetrahedronTriangles[iFlagIndex][3*iTriangle] < 0)
-            break;
-
-        for(iCorner = 0; iCorner < 3; iCorner++)
-        {
-            iVertex = a2iTetrahedronTriangles[iFlagIndex][3*iTriangle+iCorner];
-
-            normals.push_back(asEdgeNorm[iVertex]);
-            vertices.push_back(asEdgeVertex[iVertex]);
-        }
-    }
-}
-
-
-
-//vMarchCube2 performs the Marching Tetrahedrons algorithm on a single cube by making six calls to vMarchTetrahedron
-extern void vMarchCube2(float fX, float fY, float fZ, float fScale,
-                        std::vector<Vector>& vertices, std::vector<Vector>& normals)
-{
-    int iVertex, iTetrahedron, iVertexInACube;
-    Vector asCubePosition[8];
-    float  afCubeValue[8];
-    Vector asTetrahedronPosition[4];
-    float  afTetrahedronValue[4];
-
-    //Make a local copy of the cube's corner positions
-    for(iVertex = 0; iVertex < 8; iVertex++)
-    {
-        asCubePosition[iVertex].fX = fX + a2fVertexOffset[iVertex][0]*fScale;
-        asCubePosition[iVertex].fY = fY + a2fVertexOffset[iVertex][1]*fScale;
-        asCubePosition[iVertex].fZ = fZ + a2fVertexOffset[iVertex][2]*fScale;
-    }
-
-    //Make a local copy of the cube's corner values
-    for(iVertex = 0; iVertex < 8; iVertex++)
-    {
-        afCubeValue[iVertex] = fSample(asCubePosition[iVertex].fX,
-                                       asCubePosition[iVertex].fY,
-                                       asCubePosition[iVertex].fZ);
-    }
-
-    for(iTetrahedron = 0; iTetrahedron < 6; iTetrahedron++)
-    {
-        for(iVertex = 0; iVertex < 4; iVertex++)
-        {
-            iVertexInACube = a2iTetrahedronsInACube[iTetrahedron][iVertex];
-            asTetrahedronPosition[iVertex].fX = asCubePosition[iVertexInACube].fX;
-            asTetrahedronPosition[iVertex].fY = asCubePosition[iVertexInACube].fY;
-            asTetrahedronPosition[iVertex].fZ = asCubePosition[iVertexInACube].fZ;
-            afTetrahedronValue[iVertex] = afCubeValue[iVertexInACube];
-        }
-        vMarchTetrahedron(asTetrahedronPosition, afTetrahedronValue, vertices, normals);
     }
 }
 
